@@ -81,7 +81,6 @@ const createPlace = async (req, res, next) => {
   }
   const { title, description, coordinates, imageUrl, address, creator } =
     req.body;
-  console.log("Mongoose connection state:", mongoose.connection.readyState);
 
   const createdPlace = new Place({
     // id: uuidv4(),
@@ -92,10 +91,11 @@ const createPlace = async (req, res, next) => {
     imageUrl,
     creator,
   });
+  console.log(createdPlace);
   try {
     console.log("before create");
-    const placeResult = await createdPlace.save();
-    console.log(placeResult);
+
+    await createdPlace.save();
   } catch (err) {
     return next(new HttpError("creating place failed, please try again", 500));
   }

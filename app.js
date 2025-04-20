@@ -28,6 +28,13 @@ app.use((error, req, res, next) => {
   res.json({ message: error.message || "An unknown error occurred!" });
 });
 
+mongoose.set("debug", true);
+
+// (2) Log connection events
+mongoose.connection.on("connecting", () => console.log("Connecting..."));
+mongoose.connection.on("connected", () => console.log("Connected!"));
+mongoose.connection.on("error", (err) => console.error("Error:", err));
+
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(() =>
