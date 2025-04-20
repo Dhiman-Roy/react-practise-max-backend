@@ -1,6 +1,7 @@
 const HttpError = require("../models/http-error");
 const { validationResult } = require("express-validator");
 const { v4: uuidv4 } = require("uuid");
+const Place = require("../models/place");
 
 let DUMMY_PLACES = [
   {
@@ -71,23 +72,34 @@ const getPlacesByUserId = (req, res, next) => {
   res.json({ places });
 };
 
-const createPlace = (req, res, next) => {
+const createPlace = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return next(
       new HttpError("Invalid inputs passed, please check your data.", 422)
     );
   }
-  const { title, description, coordinates, address, creator } = req.body;
-  const createdPlace = {
-    id: uuidv4(),
+  const { title, description, coordinates, imageUrl, address, creator } =
+    req.body;
+  console.log("Mongoose connection state:", mongoose.connection.readyState);
+
+  const createdPlace = new Place({
+    // id: uuidv4(),
     title,
     description,
     location: coordinates,
     address,
+    imageUrl,
     creator,
-  };
-  DUMMY_PLACES.push(createdPlace);
+  });
+  try {
+    console.log("before create");
+    const placeResult = await createdPlace.save();
+    console.log(placeResult);
+  } catch (err) {
+    return next(new HttpError("creating place failed, please try again", 500));
+  }
+
   res.status(201).json({ place: createdPlace });
 };
 
