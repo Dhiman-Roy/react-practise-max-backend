@@ -36,7 +36,7 @@ mongoose.connection.on("connected", () => console.log("Connected!"));
 mongoose.connection.on("error", (err) => console.error("Error:", err));
 
 mongoose
-  .connect(process.env.MONGODB_URI)
+  .connect(process.env.MONGODB_URL)
   .then(() =>
     app.listen(5000, (err) => {
       console.log("Listening to port 5000");
