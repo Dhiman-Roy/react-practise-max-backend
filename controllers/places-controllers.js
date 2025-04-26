@@ -95,8 +95,11 @@ const createPlace = async (req, res, next) => {
       new HttpError("Invalid inputs passed, please check your data.", 422)
     );
   }
-  const { title, description, coordinates, imageUrl, address, creator } =
+  const { title, description, coordinates, imageURL, address, creator } =
     req.body;
+  if (!imageURL) {
+    return next(new HttpError("Image URL is required", 422));
+  }
 
   const createdPlace = new Place({
     // id: uuidv4(),
@@ -104,34 +107,44 @@ const createPlace = async (req, res, next) => {
     description,
     location: coordinates,
     address,
-    image: imageUrl,
+    image: imageURL,
     creator,
   });
   let user;
   try {
     user = await User.findById(creator);
   } catch (err) {
-    return next(new HttpError("creating place failed. please try again.", 500));
+    return next(
+      new HttpError("creating place failed... please try again.", 500)
+    );
   }
 
   if (!user) {
     return next(new HttpError("could not find user for provided id", 404));
   }
-  console.log(user);
 
+  const session = await mongoose.startSession();
   try {
-    console.log("before create");
-    const session = await mongoose.startSession();
     session.startTransaction();
+    console.log("before save createdplace");
+    console.log(createdPlace);
+    console.log("Mongoose connection state:", mongoose.connection.readyState); // Should be 1
+    console.log("Session active:", session.id);
+    console.log("Place document validation:", createdPlace.validateSync()); // Should be undefined
     await createdPlace.save({ session });
-    user.places.push(createdPlace);
+    console.log("before push");
+    user.places.push(createdPlace._id);
+    console.log("before user save");
     await user.save({ session });
-    await sess.commitTransaction();
+    console.log("before comitting");
+    await session.commitTransaction();
+
+    res.status(201).json({ place: createdPlace });
   } catch (err) {
-    // await sess.abortTransaction();
     return next(new HttpError("creating place failed, please try again", 500));
+  } finally {
+    session.endSession();
   }
-  res.status(201).json({ place: createdPlace });
 };
 
 const updatePlace = async (req, res, next) => {
