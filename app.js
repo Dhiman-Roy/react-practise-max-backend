@@ -4,7 +4,10 @@ const app = express();
 const placesRoutes = require("./routes/places-routes");
 const usersRoutes = require("./routes/users-routes");
 const mongoose = require("mongoose");
+const cors = require("cors");
 require("dotenv").config();
+
+app.use(cors());
 
 app.use(express.json());
 

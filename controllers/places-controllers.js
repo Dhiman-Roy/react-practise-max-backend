@@ -1,50 +1,9 @@
 const HttpError = require("../models/http-error");
 const { validationResult } = require("express-validator");
-const { v4: uuidv4 } = require("uuid");
+
 const Place = require("../models/place");
 const User = require("../models/user");
 const mongoose = require("mongoose");
-let DUMMY_PLACES = [
-  {
-    id: "p1",
-    title: "Darjiling City",
-    description: "Most Beautiful area city",
-    imageUrl:
-      "https://images.unsplash.com/photo-1622308644420-b20142dc993c?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8ZGFyamVlbGluZ3xlbnwwfHwwfHx8MA%3D%3D",
-    address: "27WC+9V2 Darjeeling, West Bengal, India",
-    location: {
-      lat: 27.0458959,
-      lng: 88.2672631,
-    },
-    creator: "u1",
-  },
-  {
-    id: "p2",
-    title: "meghalaya",
-    description: "Most Beautiful site",
-    imageUrl:
-      "https://www.shutterstock.com/image-photo/magnificent-view-nohkalikai-fallsmeghalayaindia-600nw-1127211419.jpg",
-    address: "27WC+9V2 meghalaya, India",
-    location: {
-      lat: 25.3125179,
-      lng: 91.7663951,
-    },
-    creator: "u2",
-  },
-  {
-    id: "p3",
-    title: "syhlet",
-    description: "Most Beautiful area ",
-    imageUrl:
-      "https://upload.wikimedia.org/wikipedia/commons/4/4d/Jaflong_Sylhet.jpg",
-    address: "27WC+9V2 syhlet, Bangladesh",
-    location: {
-      lat: 24.9261249,
-      lng: 91.8825551,
-    },
-    creator: "u3",
-  },
-];
 
 const getPlaceById = async (req, res, next) => {
   const placeId = req.params.pid;
@@ -68,9 +27,7 @@ const getPlaceById = async (req, res, next) => {
 const getPlacesByUserId = async (req, res, next) => {
   const userId = req.params.uid;
   let places;
-  // const places = Place.filter((p) => {
-  //   return p.creator === userId;
-  // });
+
   try {
     places = await Place.find({ creator: userId });
   } catch (err) {
@@ -102,7 +59,6 @@ const createPlace = async (req, res, next) => {
   }
 
   const createdPlace = new Place({
-    // id: uuidv4(),
     title,
     description,
     location: coordinates,
@@ -180,12 +136,34 @@ const deletePlace = async (req, res, next) => {
   const placeId = req.params.pid;
   let place;
   try {
-    place = await Place.deleteOne({ _id: placeId });
+    place = await Place.findById(placeId).populate("creator");
   } catch (err) {
     return next(
       new HttpError("something went wrong, could not delete place", 500)
     );
   }
+  if (!place) {
+    return next(
+      new HttpError("Something went wrong, could not find place id.", 404)
+    );
+  }
+  const session = await mongoose.startSession();
+  try {
+    console.log(place);
+
+    session.startTransaction();
+
+    await place.deleteOne("", { session });
+
+    place.creator.places.pull(place);
+
+    await place.creator.save({ session });
+
+    await session.commitTransaction();
+  } catch (err) {
+    return next(new HttpError("could not delete. please try later", 500));
+  }
+  console.log(await Place.findById(placeId));
 
   res.status(200).json({ message: "Deleted place" });
 };
