@@ -52,20 +52,29 @@ const createPlace = async (req, res, next) => {
       new HttpError("Invalid inputs passed, please check your data.", 422)
     );
   }
-  const { title, description, coordinates, imageURL, address, creator } =
-    req.body;
-  if (!imageURL) {
+
+  const { title, description, coordinates, address, creator } = req.body;
+  console.log(req.body);
+  const { lat, lng } = JSON.parse(coordinates);
+  console.log("lat is: " + lat);
+  const image = req.file.path;
+  if (!image) {
     return next(new HttpError("Image URL is required", 422));
   }
-
+  console.log(JSON.stringify(coordinates));
   const createdPlace = new Place({
     title,
     description,
-    location: coordinates,
+    location: {
+      lat,
+      lng,
+    },
     address,
-    image: imageURL,
+    image: image,
     creator,
   });
+  console.log("created place are");
+  console.log(createdPlace);
   let user;
   try {
     user = await User.findById(creator);
@@ -82,17 +91,13 @@ const createPlace = async (req, res, next) => {
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
-    console.log("before save createdplace");
-    console.log(createdPlace);
-    console.log("Mongoose connection state:", mongoose.connection.readyState); // Should be 1
-    console.log("Session active:", session.id);
-    console.log("Place document validation:", createdPlace.validateSync()); // Should be undefined
+
     await createdPlace.save({ session });
-    console.log("before push");
+
     user.places.push(createdPlace._id);
-    console.log("before user save");
+
     await user.save({ session });
-    console.log("before comitting");
+
     await session.commitTransaction();
 
     res.status(201).json({ place: createdPlace });
@@ -149,8 +154,6 @@ const deletePlace = async (req, res, next) => {
   }
   const session = await mongoose.startSession();
   try {
-    console.log(place);
-
     session.startTransaction();
 
     await place.deleteOne("", { session });
@@ -163,7 +166,6 @@ const deletePlace = async (req, res, next) => {
   } catch (err) {
     return next(new HttpError("could not delete. please try later", 500));
   }
-  console.log(await Place.findById(placeId));
 
   res.status(200).json({ message: "Deleted place" });
 };

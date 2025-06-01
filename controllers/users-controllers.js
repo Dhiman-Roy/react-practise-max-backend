@@ -15,13 +15,14 @@ const getUsers = async (req, res, next) => {
 };
 
 const signup = async (req, res, next) => {
+  console.log(req);
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return next(
       new HttpError("Invalid inputs passed, please check your data.", 422)
     );
   }
-  const { name, email, password, image } = req.body;
+  const { name, email, password } = req.body;
   let hasUser;
   try {
     hasUser = await User.findOne({ email: email });
@@ -31,12 +32,13 @@ const signup = async (req, res, next) => {
   if (hasUser) {
     return next(new HttpError("This user already exists. please log in.", 422));
   }
+
   const createdUser = new User({
     name,
     email,
     password,
     places: [],
-    image,
+    image: req.file.path.replace(/\\/g, "/"),
   });
   try {
     await createdUser.save();
@@ -45,8 +47,7 @@ const signup = async (req, res, next) => {
       new HttpError("Something went wrong. please try again later.", 500)
     );
   }
-  const v = { user: createdUser.toObject({ getters: true }) };
-  console.log(v);
+
   res.status(201).json({ user: createdUser.toObject({ getters: true }) });
 };
 
