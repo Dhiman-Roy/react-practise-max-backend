@@ -1,6 +1,6 @@
 const HttpError = require("../models/http-error");
 const { validationResult } = require("express-validator");
-
+const fs = require("fs");
 const Place = require("../models/place");
 const User = require("../models/user");
 const mongoose = require("mongoose");
@@ -54,14 +54,14 @@ const createPlace = async (req, res, next) => {
   }
 
   const { title, description, coordinates, address, creator } = req.body;
-  console.log(req.body);
+
   const { lat, lng } = JSON.parse(coordinates);
-  console.log("lat is: " + lat);
+
   const image = req.file.path;
   if (!image) {
     return next(new HttpError("Image URL is required", 422));
   }
-  console.log(JSON.stringify(coordinates));
+
   const createdPlace = new Place({
     title,
     description,
@@ -73,8 +73,7 @@ const createPlace = async (req, res, next) => {
     image: image,
     creator,
   });
-  console.log("created place are");
-  console.log(createdPlace);
+
   let user;
   try {
     user = await User.findById(creator);
@@ -142,6 +141,7 @@ const deletePlace = async (req, res, next) => {
   let place;
   try {
     place = await Place.findById(placeId).populate("creator");
+    console.dir(place);
   } catch (err) {
     return next(
       new HttpError("something went wrong, could not delete place", 500)
@@ -166,7 +166,13 @@ const deletePlace = async (req, res, next) => {
   } catch (err) {
     return next(new HttpError("could not delete. please try later", 500));
   }
-
+  fs.unlink(place.image, (err) => {
+    if (err) {
+      console.log(err);
+    } else {
+      console.log("Image deleted successfully");
+    }
+  });
   res.status(200).json({ message: "Deleted place" });
 };
 
