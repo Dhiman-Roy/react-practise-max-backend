@@ -124,6 +124,11 @@ const updatePlace = async (req, res, next) => {
       new HttpError("something went wrong. could not find a place.", 500)
     );
   }
+  if (place.creator.toString() !== req.userData.userId) {
+    return next(
+      new HttpError("This credential is not allowed to update this place", 401)
+    );
+  }
   place.description = description;
   place.title = title;
   try {
@@ -150,6 +155,12 @@ const deletePlace = async (req, res, next) => {
   if (!place) {
     return next(
       new HttpError("Something went wrong, could not find place id.", 404)
+    );
+  }
+
+  if (place.creator.id !== req.userData.userId) {
+    return next(
+      new HttpError("This credential is not allowed to delete this place", 401)
     );
   }
   const session = await mongoose.startSession();
